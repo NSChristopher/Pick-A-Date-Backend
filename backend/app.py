@@ -1,14 +1,15 @@
+from datetime import datetime
 import random
 from flask import Flask, jsonify, request, current_app
 from flask_sqlalchemy import SQLAlchemy
 from flask_restx import Api, Resource, fields
-from utility import Utilities
+from .utilities import Utility
 
 import os
 import uuid
 import logging
 
-standardize_response = Utilities.standardize_response
+standardize_response = Utility.standardize_response
 
 
 # Initialize Flask app and SQLAlchemy
@@ -27,10 +28,13 @@ api = Api(app)
 logging.basicConfig(level=logging.DEBUG)
 
 # Import models after initializing db to avoid circular import
-from models import Date, Event, User
+from .models import Date, Event, User
 
 event_create_model = api.model('EventCreate', {
     'event_name': fields.String,
+    'description': fields.String,
+    'max_date': fields.Date,
+    'min_date': fields.Date,
     'lon': fields.Float,
     'lat': fields.Float
 })
@@ -38,6 +42,10 @@ event_create_model = api.model('EventCreate', {
 event_model = api.model('Event', {
     'event_id': fields.Integer,
     'event_name': fields.String,
+    'description': fields.String,
+    'date_created': fields.DateTime,
+    'max_date': fields.Date,
+    'min_date': fields.Date,
     'lon': fields.Float,
     'lat': fields.Float,
     'uuid': fields.String,
@@ -47,14 +55,21 @@ event_model = api.model('Event', {
 events_ns = api.namespace('events', description='Events related operations')
 api.add_namespace(events_ns)
 
-@events_ns.route('/events')
+@events_ns.route('/event')
 class event(Resource):
     @events_ns.expect(event_create_model)
     def post(self):
         try:
             data = request.get_json()
+
+            max_date = datetime.strptime(data['max_date'], '%Y-%m-%d').date()
+            min_date = datetime.strptime(data['min_date'], '%Y-%m-%d').date()
+
             event = Event.create(
                 event_name=data['event_name'],
+                description=data['description'],
+                max_date=max_date,
+                min_date=min_date,
                 lon=data['lon'],
                 lat=data['lat'],
                 uuid=str(uuid.uuid4())
@@ -103,7 +118,7 @@ class event(Resource):
 user_create_model = api.model('UserCreate', {
     'event_id': fields.Integer,
     'name': fields.String,
-    'email': fields.String,
+    'phone': fields.String,
     'lat': fields.Float,
     'lon': fields.Float,
     'is_driver': fields.Boolean
@@ -112,7 +127,7 @@ user_create_model = api.model('UserCreate', {
 users_ns = api.namespace('users', description='Users related operations')
 api.add_namespace(users_ns)
         
-@users_ns.route('/users')
+@users_ns.route('/user')
 class user(Resource):
     @users_ns.expect(user_create_model)
     def post(self):
@@ -121,7 +136,7 @@ class user(Resource):
             user = User.create(
                 event_id=data['event_id'],
                 name=data['name'],
-                email=data['email'],
+                phone=data['phone'],
                 lat=data['lat'],
                 lon=data['lon'],
                 icon_path='default.png',
@@ -146,15 +161,15 @@ class user(Resource):
     
     # takes url parameter of event_id
     @users_ns.doc(params={'event_id': 'ID of the event',
-                          'email': 'Email of the user',
+                          'phone': 'Phone of the user',
                           'date': 'Date of the event (YYYY-MM-DD)'})
     def get(self):
         try:
-            # if event_id and email are provided, return the user
-            if 'event_id' in request.args and 'email' in request.args:
+            # if event_id and phone are provided, return the user
+            if 'event_id' in request.args and 'phone' in request.args:
                 event_id = request.args.get('event_id')
-                email = request.args.get('email')
-                user = User.get_user_by_email_and_event_id(event_id=event_id, email=email)
+                phone = request.args.get('phone')
+                user = User.get_user_by_phone_and_event_id(event_id=event_id, phone=phone)
                 if not user:
                     return standardize_response(
                         status='error',
@@ -230,17 +245,20 @@ date_delete_model = api.model('DateDelete', {
     'user_id': fields.Integer
 })
 
-@dates_ns.route('/dates')
+@dates_ns.route('/date')
 class date(Resource):
 
     @dates_ns.expect(date_create_model)
     def post(self):
         try:
             data = request.get_json()
+
+            d = datetime.strptime(data['date'], '%Y-%m-%d').date()
+
             date = Date.create(
                 event_id=data['event_id'],
                 user_id=data['user_id'],
-                date=data['date'],
+                date=d,
                 is_blocked=data['is_blocked']
             )
             db.session.commit()
@@ -306,7 +324,7 @@ class date(Resource):
                     code=200
                 )
             # if both event_id and user_id are provided, return the dates for the user
-            elif 'user_id' in request.args:
+            elif 'user_id' in request.args and 'event_id' in request.args:
                 user_id = request.args.get('user_id')
                 dates = Date.get_dates_by_user_id(user_id)
                 if not date:

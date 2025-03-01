@@ -17,7 +17,10 @@ DROP TABLE IF EXISTS `PickADateDB`.`event` ;
 CREATE TABLE IF NOT EXISTS `PickADateDB`.`event` (
   `event_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `event_name` VARCHAR(45) NOT NULL,
-  `start_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `description` VARCHAR(255) NULL,
+  `date_created` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `max_date` DATE NOT NULL,
+  `min_date` DATE NOT NULL,
   `lon` DECIMAL(10,8) NULL,
   `lat` DECIMAL(10,8) NULL,
   `uuid` VARCHAR(45) NOT NULL,
@@ -27,6 +30,7 @@ CREATE TABLE IF NOT EXISTS `PickADateDB`.`event` (
 
 -- -----------------------------------------------------
 -- Table `PickADateDB`.`user`
+
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `PickADateDB`.`user` ;
 
@@ -34,7 +38,7 @@ CREATE TABLE IF NOT EXISTS `PickADateDB`.`user` (
   `user_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `event_id` INT UNSIGNED NOT NULL,
   `name` VARCHAR(45) NOT NULL,
-  `email` VARCHAR(254) NOT NULL,
+  `phone` VARCHAR(64) NOT NULL,
   `lat` DECIMAL(10,8) NULL,
   `lon` DECIMAL(10,8) NULL,
   `icon_path` VARCHAR(45) NULL,
@@ -57,7 +61,7 @@ DROP TABLE IF EXISTS `PickADateDB`.`date` ;
 CREATE TABLE IF NOT EXISTS `PickADateDB`.`date` (
   `date_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `event_id` INT UNSIGNED NOT NULL,
-  `user_id` INT UNSIGNED NOT NULL,
+  `user_id` INT UNSIGNED,
   `date` DATE NOT NULL,
   `is_blocked` BOOLEAN NOT NULL DEFAULT FALSE,
   PRIMARY KEY (`date_id`),
@@ -76,3 +80,17 @@ CREATE TABLE IF NOT EXISTS `PickADateDB`.`date` (
     ON UPDATE NO ACTION,
   CONSTRAINT `one_user_id_per_date`
     UNIQUE (`event_id`, `date`, `user_id`));
+
+
+-- ------------------------------------------------
+-- Triggers
+-- ------------------------------------------------
+
+DELIMITER $$
+CREATE TRIGGER `PickADateDB`.`event_ON_DELETE` BEFORE DELETE ON `PickADateDB`.`event`
+FOR EACH ROW
+BEGIN
+    DELETE FROM `PickADateDB`.`user` WHERE `event_id` = OLD.`event_id`;
+    DELETE FROM `PickADateDB`.`date` WHERE `event_id` = OLD.`event_id`;
+END$$
+DELIMITER ;

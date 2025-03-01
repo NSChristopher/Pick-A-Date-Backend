@@ -1,5 +1,5 @@
 from datetime import datetime, date
-from app import db
+from .app import db
 from sqlalchemy import DATE, Column, Date, DateTime, Float, ForeignKey, Integer, String, TIMESTAMP, and_, text
 from sqlalchemy.dialects.mysql import INTEGER, TINYINT, BOOLEAN
 from sqlalchemy.orm import relationship
@@ -11,7 +11,10 @@ class Event(db.Model):
 
     event_id = Column(INTEGER(10, unsigned=True), primary_key=True)
     event_name = Column(String(45), nullable=False)
-    start_date = Column(DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP"))
+    description = Column(String(255))
+    date_created = Column(DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP"))
+    max_date = Column(DATE)
+    min_date = Column(DATE)
     lon = Column(Float)
     lat = Column(Float)
     uuid = Column(String(45))
@@ -24,7 +27,10 @@ class Event(db.Model):
         return {
             'event_id': self.event_id,
             'event_name': self.event_name,
-            'start_date': self.start_date,
+            'description': self.description,
+            'date_created': self.date_created.isoformat() if self.date_created else None,
+            'max_date': self.max_date.isoformat() if self.date_created else None,
+            'min_date': self.min_date.isoformat() if self.date_created else None,
             'lon': self.lon,
             'lat': self.lat,
             'uuid': self.uuid,
@@ -32,10 +38,14 @@ class Event(db.Model):
         }
 
     @classmethod
-    def create(cls, event_name, uuid, lon=None, lat=None, is_active=True):
+    def create(cls, event_name, description, max_date, min_date,
+               uuid, lon=None, lat=None, is_active=True):
         try:
             event = Event(
                 event_name=event_name,
+                description=description,
+                max_date=max_date,
+                min_date=min_date,
                 lon=lon,
                 lat=lat,
                 uuid=uuid,
@@ -51,6 +61,16 @@ class Event(db.Model):
         try:
             event = Event.query.get(event_id)
             event.event_name = event_name
+            db.session.commit()
+            return event
+        except Exception as e:
+            raise e
+
+    @classmethod
+    def update_description(cls, event_id, description):
+        try:
+            event = Event.query.get(event_id)
+            event.description = description
             db.session.commit()
             return event
         except Exception as e:
@@ -90,7 +110,7 @@ class User(db.Model):
     user_id = Column(INTEGER(10, unsigned=True), primary_key=True)
     event_id = Column(ForeignKey('event.event_id', ondelete='NO ACTION', onupdate='NO ACTION'), nullable=False, index=True)
     name = Column(String(45), nullable=False)
-    email = Column(String(254))
+    phone = Column(String(64))
     lat = Column(Float)
     lon = Column(Float)
     icon_path = Column(String(45))
@@ -102,7 +122,7 @@ class User(db.Model):
             'user_id': self.user_id,
             'event_id': self.event_id,
             'name': self.name,
-            'email': self.email,
+            'phone': self.phone,
             'lat': self.lat,
             'lon': self.lon,
             'icon_path': self.icon_path,
@@ -111,12 +131,12 @@ class User(db.Model):
         }
     
     @classmethod
-    def create(cls, event_id, name, email, lat, lon, icon_path, color, is_driver):
+    def create(cls, event_id, name, phone, lat, lon, icon_path, color, is_driver):
         try:
             user = User(
                 event_id=event_id,
                 name=name,
-                email=email,
+                phone=phone,
                 lat=lat,
                 lon=lon,
                 icon_path=icon_path,
@@ -157,9 +177,9 @@ class User(db.Model):
             raise e
 
     @classmethod
-    def get_user_by_email_and_event_id(cls, email, event_id):
+    def get_user_by_phone_and_event_id(cls, phone, event_id):
         try:
-            return User.query.filter_by(email=email, event_id=event_id).first()
+            return User.query.filter_by(phone=phone, event_id=event_id).first()
         except Exception as e:
             raise e
     
@@ -191,7 +211,7 @@ class Date(db.Model):
             'date_id': self.date_id,
             'event_id': self.event_id,
             'user_id': self.user_id,
-            'date': self.date,
+            'date': self.date.isoformat() if self.date else None,
             'is_blocked': self.is_blocked
         }
     

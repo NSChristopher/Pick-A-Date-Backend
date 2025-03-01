@@ -1,11 +1,10 @@
 from flask import jsonify
 
-class Utilities:
+class Utility:
     @staticmethod
     def standardize_response(status='success', data=[], message="", code = 200):
-        return jsonify({
+        return {
             'status': status,
             'data': data,
             'message': message,
-            'code': code
-        })
+        }, code
