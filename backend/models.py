@@ -152,7 +152,7 @@ class Address(db.Model):
     @classmethod
     def get_addresses_by_entity_id(cls, entity_type, entity_id):
         try:
-            return Address.query.filter_by(entity_type=entity_type, entity_id=entity_id)
+            return Address.query.filter_by(entity_type=entity_type, entity_id=entity_id).all()
         except Exception as e:
             raise e
     

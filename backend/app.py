@@ -42,7 +42,7 @@ def create_app(config_name=None):
 
         address_model = api.model('Address', {
             'address_id': fields.Integer,
-            'address_name': fields.String(required=True),
+            'address_name': fields.String,
             'street_line_1': fields.String,
             'street_line_2': fields.String,
             'city': fields.String,
@@ -51,7 +51,7 @@ def create_app(config_name=None):
             'postal_code': fields.String,
         })
 
-        event_model = api.model('EventCreate', {
+        event_model = api.model('Event', {
             'event_id': fields.Integer,
             'event_name': fields.String,
             'description': fields.String,
