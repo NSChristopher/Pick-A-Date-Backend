@@ -49,7 +49,6 @@ def create_app(config_name=None):
             'state_or_province': fields.String,
             'country_code': fields.String,
             'postal_code': fields.String,
-            'addresses': fields.List(fields.Nested(address_model), required=False)
         })
 
         event_model = api.model('EventCreate', {
