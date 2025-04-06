@@ -84,18 +84,6 @@ def create_app(config_name=None):
                         uuid=str(uuid.uuid4())
                     )
                     db.session.flush()
-
-                # entity_type=entity_type,
-                # entity_id=entity_id,
-                # address_name=address_name,
-                # street_line_1=street_line_1,
-                # street_line_2=street_line_2,
-                # city=city,
-                # state_or_province=state_or_province,
-                # country_code=country_code,
-                # postal_code=postal_code,
-                # latitude=latitude,
-                # longitude=longitude
                     
                     addresses_data = data.get('addresses', [])
                     if len(addresses_data) > 0:
@@ -151,7 +139,7 @@ def create_app(config_name=None):
 
                     return standardize_response(
                         status='success',
-                        data=event.to_dict(),
+                        data=event_data,
                         message='Event retrieved successfully',
                         code=200
                     )
