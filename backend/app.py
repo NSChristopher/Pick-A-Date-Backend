@@ -101,8 +101,6 @@ def create_app(config_name=None):
                                 latitude=address.get('lat', None),
                                 longitude=address.get('lon', None)
                             )
-                            db.session.add(address)
-
 
                     db.session.commit()
                     return standardize_response(
@@ -132,7 +130,7 @@ def create_app(config_name=None):
                             code=404
                         )
                     
-                    addresses = Address.get_addresses_by_entity_id(event.event_id, EntityTypeEnum.EVENT)
+                    addresses = Address.get_addresses_by_entity_id(entity_type=EntityTypeEnum.EVENT, entity_id=event.event_id)
                     event_data = event.to_dict()
                     event_data['addresses'] = [addres.to_dict() for addres in addresses] if addresses else []
 
