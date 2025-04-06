@@ -19,14 +19,33 @@ CREATE TABLE IF NOT EXISTS `PickADateDB`.`event` (
   `event_name` VARCHAR(45) NOT NULL,
   `description` VARCHAR(255) NULL,
   `date_created` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `max_date` DATE NOT NULL,
-  `min_date` DATE NOT NULL,
-  `lon` DECIMAL(10,8) NULL,
-  `lat` DECIMAL(10,8) NULL,
+  `min_date` DATE NOT NULL DEFAULT DATE_ADD(CURRENT_DATE, INTERVAL 1 DAY),
+  `max_date` DATE NOT NULL DEFAULT DATE_ADD(CURRENT_DATE, INTERVAL 30 DAY),
   `uuid` VARCHAR(45) NOT NULL,
   `is_active` BOOLEAN NOT NULL DEFAULT TRUE,
   PRIMARY KEY (`event_id`),
   UNIQUE INDEX `event_id` (`event_id` ASC) VISIBLE);
+
+-- -----------------------------------------------------
+-- Table `PickADateDB`.`address`
+-- -----------------------------------------------------
+
+DROP TABLE IF EXISTS `PickADateDB`.`address` (
+  `address_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `entity_type` ENUM('event', 'user') NOT NULL,
+  `entity_id` INT UNSIGNED NOT NULL,
+  `address_name` VARCHAR(255) NOT NULL,
+  `street_line_1` VARCHAR(255) NOT NULL,
+  `street_line_2` VARCHAR(255) NULL,
+  `city` VARCHAR(255) NOT NULL,
+  `state_or_province` VARCHAR(255) NOT NULL,
+  `country_code` VARCHAR(2) NOT NULL,
+  `postal_code` VARCHAR(20) NOT NULL,
+  `latitude` DECIMAL(9,6) NULL,
+  `longitude` DECIMAL(9,6) NULL,
+  PRIMARY KEY (`address_id`),
+  INDEX `entity_id_idx` (`entity_type`, `entity_id`)
+);
 
 -- -----------------------------------------------------
 -- Table `PickADateDB`.`user`
@@ -39,8 +58,7 @@ CREATE TABLE IF NOT EXISTS `PickADateDB`.`user` (
   `event_id` INT UNSIGNED NOT NULL,
   `name` VARCHAR(45) NOT NULL,
   `phone` VARCHAR(64) NOT NULL,
-  `lat` DECIMAL(10,8) NULL,
-  `lon` DECIMAL(10,8) NULL,
+  `postal_code` VARCHAR(20) NULL,
   `icon_path` VARCHAR(45) NULL,
   `color` VARCHAR(45) NULL,
   `is_driver` BOOLEAN NOT NULL DEFAULT FALSE,
@@ -92,5 +110,6 @@ FOR EACH ROW
 BEGIN
     DELETE FROM `PickADateDB`.`user` WHERE `event_id` = OLD.`event_id`;
     DELETE FROM `PickADateDB`.`date` WHERE `event_id` = OLD.`event_id`;
+    DELETE FROM `PickADateDB`.`address` WHERE `event_id` = OLD.`event_id`;
 END$$
 DELIMITER ;

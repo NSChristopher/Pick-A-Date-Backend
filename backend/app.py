@@ -36,30 +36,32 @@ def create_app(config_name=None):
 
     with app.app_context():
         # Import models here
-        from .models import Date, Event, User
+        from .models import Date, Event, User, Address, EntityTypeEnum
         db.create_all()
 
 
-        event_create_model = api.model('EventCreate', {
-            'event_name': fields.String,
-            'description': fields.String,
-            'max_date': fields.Date,
-            'min_date': fields.Date,
-            'lon': fields.Float,
-            'lat': fields.Float
+        address_model = api.model('Address', {
+            'address_id': fields.Integer,
+            'address_name': fields.String(required=True),
+            'street_line_1': fields.String,
+            'street_line_2': fields.String,
+            'city': fields.String,
+            'state_or_province': fields.String,
+            'country_code': fields.String,
+            'postal_code': fields.String,
+            'addresses': fields.List(fields.Nested(address_model), required=False)
         })
 
-        event_model = api.model('Event', {
+        event_model = api.model('EventCreate', {
             'event_id': fields.Integer,
             'event_name': fields.String,
             'description': fields.String,
             'date_created': fields.DateTime,
-            'max_date': fields.Date,
             'min_date': fields.Date,
-            'lon': fields.Float,
-            'lat': fields.Float,
+            'max_date': fields.Date,
             'uuid': fields.String,
-            'is_active': fields.Boolean
+            'is_active': fields.Boolean,
+            'addresses': fields.List(fields.Nested(address_model), required=False)
         })
 
         events_ns = api.namespace('events', description='Events related operations')
@@ -67,7 +69,7 @@ def create_app(config_name=None):
 
         @events_ns.route('/event')
         class event(Resource):
-            @events_ns.expect(event_create_model)
+            @events_ns.expect(event_model)
             def post(self):
                 try:
                     data = request.get_json()
@@ -80,10 +82,41 @@ def create_app(config_name=None):
                         description=data['description'],
                         max_date=max_date,
                         min_date=min_date,
-                        lon=data['lon'],
-                        lat=data['lat'],
                         uuid=str(uuid.uuid4())
                     )
+                    db.session.flush()
+
+                # entity_type=entity_type,
+                # entity_id=entity_id,
+                # address_name=address_name,
+                # street_line_1=street_line_1,
+                # street_line_2=street_line_2,
+                # city=city,
+                # state_or_province=state_or_province,
+                # country_code=country_code,
+                # postal_code=postal_code,
+                # latitude=latitude,
+                # longitude=longitude
+                    
+                    addresses_data = data.get('addresses', [])
+                    if len(addresses_data) > 0:
+                        for address in addresses_data:
+                            address = Address.create(
+                                entity_type=EntityTypeEnum.EVENT,
+                                entity_id=event.event_id,
+                                address_name=address.get('address_name', ''),
+                                street_line_1=address.get('street_line_1', ''),
+                                street_line_2=address.get('street_line_2', ''),
+                                city=address.get('city', ''),
+                                state_or_province=address.get('state_or_province', ''),
+                                country_code=address.get('country_code', ''),
+                                postal_code=address.get('postal_code', ''),
+                                latitude=address.get('lat', None),
+                                longitude=address.get('lon', None)
+                            )
+                            db.session.add(address)
+
+
                     db.session.commit()
                     return standardize_response(
                         status='success',
@@ -111,6 +144,12 @@ def create_app(config_name=None):
                             message='Event not found',
                             code=404
                         )
+                    
+                    addresses = Address.get_addresses_by_entity_id(event.event_id, EntityTypeEnum.EVENT)
+                    event_data = event.to_dict()
+                    event_data['addresses'] = [addres.to_dict() for addres in addresses] if addresses else []
+
+
                     return standardize_response(
                         status='success',
                         data=event.to_dict(),
@@ -129,8 +168,7 @@ def create_app(config_name=None):
             'event_id': fields.Integer,
             'name': fields.String,
             'phone': fields.String,
-            'lat': fields.Float,
-            'lon': fields.Float,
+            'postal_code': fields.String,
             'is_driver': fields.Boolean
         })
 
@@ -147,8 +185,7 @@ def create_app(config_name=None):
                         event_id=data['event_id'],
                         name=data['name'],
                         phone=data['phone'],
-                        lat=data['lat'],
-                        lon=data['lon'],
+                        postal_code=data['postal_code'],
                         icon_path='default.png',
                         # generate random color
                         color='#' + '%06x' % random.randint(0, 0xFFFFFF),

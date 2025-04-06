@@ -1,6 +1,7 @@
 from datetime import datetime, date
+import enum
 from .app import db
-from sqlalchemy import DATE, Column, Date, DateTime, Float, ForeignKey, Integer, String, TIMESTAMP, and_, text
+from sqlalchemy import DATE, Column, Date, DateTime, Float, ForeignKey, Integer, String, TIMESTAMP, and_, text, Enum, Numeric, Index
 from sqlalchemy.dialects.mysql import INTEGER, TINYINT, BOOLEAN
 from sqlalchemy.orm import relationship
 
@@ -15,8 +16,6 @@ class Event(db.Model):
     date_created = Column(DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP"))
     max_date = Column(DATE)
     min_date = Column(DATE)
-    lon = Column(Float)
-    lat = Column(Float)
     uuid = Column(String(45))
     is_active = Column(BOOLEAN)
 
@@ -31,23 +30,19 @@ class Event(db.Model):
             'date_created': self.date_created.isoformat() if self.date_created else None,
             'max_date': self.max_date.isoformat() if self.date_created else None,
             'min_date': self.min_date.isoformat() if self.date_created else None,
-            'lon': self.lon,
-            'lat': self.lat,
             'uuid': self.uuid,
             'is_active': self.is_active
         }
 
     @classmethod
     def create(cls, event_name, description, max_date, min_date,
-               uuid, lon=None, lat=None, is_active=True):
+               uuid, is_active=True):
         try:
             event = Event(
                 event_name=event_name,
                 description=description,
                 max_date=max_date,
                 min_date=min_date,
-                lon=lon,
-                lat=lat,
                 uuid=uuid,
                 is_active=is_active
             )
@@ -77,17 +72,6 @@ class Event(db.Model):
             raise e
         
     @classmethod
-    def update_location(cls, event_id, lon, lat):
-        try:
-            event = Event.query.get(event_id)
-            event.lon = lon
-            event.lat = lat
-            db.session.commit()
-            return event
-        except Exception as e:
-            raise e
-        
-    @classmethod
     def deactivate(cls, event_id):
         try:
             event = Event.query.get(event_id)
@@ -103,6 +87,74 @@ class Event(db.Model):
             return Event.query.filter_by(uuid=uuid).first()
         except Exception as e:
             raise e
+
+class EntityTypeEnum(enum.Enum):
+    EVENT = "event"
+    USER = "user"
+
+class Address(db.Model):
+    __tablename__ = 'address'
+    __table_args__ = (
+        Index('entity_id_idx', 'entity_type', 'entity_id'),
+    )
+
+    address_id = Column(INTEGER(10, unsigned=True), primary_key=True)
+    entity_type = Column(Enum(EntityTypeEnum), nullable=False)
+    entity_id = Column(INTEGER(10, unsigned=True), nullable=False)
+    address_name = Column(String(255), nullable=False)
+    street_line_1 = Column(String(255), nullable=False)
+    street_line_2 = Column(String(255))
+    city = Column(String(255), nullable=False)
+    state_or_province = Column(String(255), nullable=False)
+    country_code = Column(String(2), nullable=False)
+    postal_code = Column(String(20), nullable=False)
+    latitude = Column(Numeric(9, 6))
+    longitude = Column(Numeric(9, 6))
+
+    def to_dict(self):
+        return {
+            "address_id": self.address_id,
+            "entity_type": self.entity_type.value,
+            "entity_id": self.entity_id,
+            "address_name": self.address_name,
+            "street_line_1": self.street_line_1,
+            "street_line_2": self.street_line_2,
+            "city": self.city,
+            "state_or_province": self.state_or_province,
+            "country_code": self.country_code,
+            "postal_code": self.postal_code,
+            "latitude": float(self.latitude) if self.latitude else None,
+            "longitude": float(self.longitude) if self.longitude else None,
+        }
+    
+    @classmethod
+    def create(cls, entity_type, entity_id, address_name, street_line_1, street_line_2,
+               city, state_or_province, country_code, postal_code, latitude=None, longitude=None):
+        try:
+            address = Address(
+                entity_type=entity_type,
+                entity_id=entity_id,
+                address_name=address_name,
+                street_line_1=street_line_1,
+                street_line_2=street_line_2,
+                city=city,
+                state_or_province=state_or_province,
+                country_code=country_code,
+                postal_code=postal_code,
+                latitude=latitude,
+                longitude=longitude
+            )
+            db.session.add(address)
+            return address
+        except Exception as e:
+            raise e
+        
+    @classmethod
+    def get_addresses_by_entity_id(cls, entity_type, entity_id):
+        try:
+            return Address.query.filter_by(entity_type=entity_type, entity_id=entity_id)
+        except Exception as e:
+            raise e
     
 class User(db.Model):
     __tablename__ = 'user'
@@ -111,8 +163,7 @@ class User(db.Model):
     event_id = Column(ForeignKey('event.event_id', ondelete='NO ACTION', onupdate='NO ACTION'), nullable=False, index=True)
     name = Column(String(45), nullable=False)
     phone = Column(String(64))
-    lat = Column(Float)
-    lon = Column(Float)
+    postal_code = Column(String(20))
     icon_path = Column(String(45))
     color = Column(String(45))
     is_driver = Column(BOOLEAN)
@@ -123,22 +174,20 @@ class User(db.Model):
             'event_id': self.event_id,
             'name': self.name,
             'phone': self.phone,
-            'lat': self.lat,
-            'lon': self.lon,
+            'postal_code': self.postal_code,
             'icon_path': self.icon_path,
             'color': self.color,
             'is_driver': self.is_driver
         }
     
     @classmethod
-    def create(cls, event_id, name, phone, lat, lon, icon_path, color, is_driver):
+    def create(cls, event_id, name, phone, postal_code, icon_path, color, is_driver):
         try:
             user = User(
                 event_id=event_id,
                 name=name,
                 phone=phone,
-                lat=lat,
-                lon=lon,
+                postal_code=postal_code,
                 icon_path=icon_path,
                 color=color,
                 is_driver=is_driver
@@ -149,11 +198,10 @@ class User(db.Model):
             raise e
         
     @classmethod
-    def update_location(cls, user_id, lat, lon):
+    def update_location(cls, user_id, postal_code):
         try:
             user = User.query.get(user_id)
-            user.lat = lat
-            user.lon = lon
+            user.postal_code = postal_code
             db.session.commit()
             return user
         except Exception as e:
@@ -204,7 +252,7 @@ class Date(db.Model):
     event_id = Column(ForeignKey('event.event_id', ondelete='NO ACTION', onupdate='NO ACTION'), nullable=False, index=True)
     user_id = Column(ForeignKey('user.user_id', ondelete='NO ACTION', onupdate='NO ACTION'), nullable=False, index=True)
     date = Column(DATE, nullable=False)
-    is_blocked = Column(BOOLEAN)
+    is_blocked = Column(BOOLEAN) # TODO: types of dates (blocked, available, ideal, etc.)
 
     def to_dict(self):
         return {
