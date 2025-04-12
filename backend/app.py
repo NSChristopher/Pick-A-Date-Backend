@@ -7,7 +7,6 @@ from .utilities import Utility
 from .configs import DevelopmentConfig, TestingConfig, ProductionConfig
 
 import os
-import uuid
 import logging
 
 standardize_response = Utility.standardize_response
@@ -80,8 +79,7 @@ def create_app(config_name=None):
                         event_name=data['event_name'],
                         description=data['description'],
                         max_date=max_date,
-                        min_date=min_date,
-                        uuid=str(uuid.uuid4())
+                        min_date=min_date
                     )
                     db.session.flush()
                     

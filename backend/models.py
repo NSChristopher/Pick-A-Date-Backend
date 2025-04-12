@@ -4,19 +4,23 @@ from .app import db
 from sqlalchemy import DATE, Column, Date, DateTime, Float, ForeignKey, Integer, String, TIMESTAMP, and_, text, Enum, Numeric, Index
 from sqlalchemy.dialects.mysql import INTEGER, TINYINT, BOOLEAN
 from sqlalchemy.orm import relationship
+import uuid
+
+# Abstract uuid class for generating UUIDs for easy future switching
+def generate_uuid():
+    return str(uuid.uuid4())
 
 
 # Define the Event model
 class Event(db.Model):
     __tablename__ = 'event'
 
-    event_id = Column(INTEGER(10, unsigned=True), primary_key=True)
+    event_uuid = Column(String(45), primary_key=True, default=generate_uuid)
     event_name = Column(String(45), nullable=False)
     description = Column(String(255))
     date_created = Column(DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP"))
     max_date = Column(DATE)
     min_date = Column(DATE)
-    uuid = Column(String(45))
     is_active = Column(BOOLEAN)
 
     users = relationship('User', backref='event')
@@ -24,13 +28,12 @@ class Event(db.Model):
     
     def to_dict(self):
         return {
-            'event_id': self.event_id,
+            'event_uuid': self.event_uuid,
             'event_name': self.event_name,
             'description': self.description,
             'date_created': self.date_created.isoformat() if self.date_created else None,
             'max_date': self.max_date.isoformat() if self.date_created else None,
             'min_date': self.min_date.isoformat() if self.date_created else None,
-            'uuid': self.uuid,
             'is_active': self.is_active
         }
 
@@ -43,7 +46,6 @@ class Event(db.Model):
                 description=description,
                 max_date=max_date,
                 min_date=min_date,
-                uuid=uuid,
                 is_active=is_active
             )
             db.session.add(event)
@@ -52,9 +54,9 @@ class Event(db.Model):
             raise e
         
     @classmethod
-    def update_name(cls, event_id, event_name):
+    def update_name(cls, event_uuid, event_name):
         try:
-            event = Event.query.get(event_id)
+            event = Event.query.get(event_uuid)
             event.event_name = event_name
             db.session.commit()
             return event
@@ -62,9 +64,9 @@ class Event(db.Model):
             raise e
 
     @classmethod
-    def update_description(cls, event_id, description):
+    def update_description(cls, event_uuid, description):
         try:
-            event = Event.query.get(event_id)
+            event = Event.query.get(event_uuid)
             event.description = description
             db.session.commit()
             return event
@@ -72,9 +74,9 @@ class Event(db.Model):
             raise e
         
     @classmethod
-    def deactivate(cls, event_id):
+    def deactivate(cls, event_uuid):
         try:
-            event = Event.query.get(event_id)
+            event = Event.query.get(event_uuid)
             event.is_active = False
             db.session.commit()
             return event

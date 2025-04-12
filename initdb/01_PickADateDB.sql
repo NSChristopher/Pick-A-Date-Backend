@@ -15,25 +15,42 @@ USE `PickADateDB` ;
 DROP TABLE IF EXISTS `PickADateDB`.`event` ;
 
 CREATE TABLE IF NOT EXISTS `PickADateDB`.`event` (
-  `event_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `event_uuid` VARCHAR(45) NOT NULL PRIMARY KEY,
   `event_name` VARCHAR(45) NOT NULL,
   `description` VARCHAR(255) NULL,
   `date_created` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `min_date` DATE NOT NULL DEFAULT DATE_ADD(CURRENT_DATE, INTERVAL 1 DAY),
   `max_date` DATE NOT NULL DEFAULT DATE_ADD(CURRENT_DATE, INTERVAL 30 DAY),
-  `uuid` VARCHAR(45) NOT NULL,
   `is_active` BOOLEAN NOT NULL DEFAULT TRUE,
-  PRIMARY KEY (`event_id`),
-  UNIQUE INDEX `event_id` (`event_id` ASC) VISIBLE);
+);
 
 -- -----------------------------------------------------
--- Table `PickADateDB`.`address`
+-- Table `PickADateDB`.`access_token`
 -- -----------------------------------------------------
+DROP TABLE IF EXISTS `PickADateDB`.`access_token` ;
 
-DROP TABLE IF EXISTS `PickADateDB`.`address` (
-  `address_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `entity_type` ENUM('event', 'user') NOT NULL,
-  `entity_id` INT UNSIGNED NOT NULL,
+CREATE TABLE IF NOT EXISTS `PickADateDB`.`access_token` (
+  `token` VARCHAR(64) NOT NULL PRIMARY KEY,
+  `event_uuid` VARCHAR(45) NOT NULL,
+  `role` ENUM('attendee', 'organizer') NOT NULL DEFAULT 'attendee',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX `event_uuid_idx` (`event_uuid`),
+  CONSTRAINT `token_event_fk`
+    FOREIGN KEY (`event_uuid`)
+    REFERENCES `PickADateDB`.`event` (`event_uuid`)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+);
+
+
+-- -----------------------------------------------------
+-- Table `PickADateDB`.`event_address`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `PickADateDB`.`event_address`;
+
+CREATE TABLE IF NOT EXISTS `PickADateDB`.`event_address` (
+  `event_address_id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `event_uuid` VARCHAR(45) NOT NULL,
   `address_name` VARCHAR(255) NOT NULL,
   `street_line_1` VARCHAR(255) NOT NULL,
   `street_line_2` VARCHAR(255) NULL,
@@ -43,33 +60,52 @@ DROP TABLE IF EXISTS `PickADateDB`.`address` (
   `postal_code` VARCHAR(20) NOT NULL,
   `latitude` DECIMAL(9,6) NULL,
   `longitude` DECIMAL(9,6) NULL,
-  PRIMARY KEY (`address_id`),
-  INDEX `entity_id_idx` (`entity_type`, `entity_id`)
+  CONSTRAINT `event_address_event_uuid`
+    FOREIGN KEY (`event_uuid`)
+    REFERENCES `PickADateDB`.`event` (`event_uuid`)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
 );
 
 -- -----------------------------------------------------
--- Table `PickADateDB`.`user`
+-- Table `PickADateDB`.`participant`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `PickADateDB`.`participant` ;
+
+CREATE TABLE IF NOT EXISTS `PickADateDB`.`participant` (
+  `participant_id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `event_uuid` VARCHAR(45) NOT NULL,
+  `account_id` INT UNSIGNED NULL,
+  `name` VARCHAR(100) NOT NULL,
+  `phone` VARCHAR(64),
+  `postal_code` VARCHAR(20),
+  `icon_path` VARCHAR(255),
+  `color` VARCHAR(45),
+  `is_driver` BOOLEAN DEFAULT FALSE,
+  UNIQUE(event_uuid, account_id),
+  FOREIGN KEY (event_uuid) REFERENCES event(event_uuid),
+  FOREIGN KEY (account_id) REFERENCES account(account_id)
+);
 
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `PickADateDB`.`user` ;
+-- Table `PickADateDB`.`account`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `PickADateDB`.`account` ;
 
-CREATE TABLE IF NOT EXISTS `PickADateDB`.`user` (
-  `user_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `event_id` INT UNSIGNED NOT NULL,
-  `name` VARCHAR(45) NOT NULL,
-  `phone` VARCHAR(64) NOT NULL,
-  `postal_code` VARCHAR(20) NULL,
-  `icon_path` VARCHAR(45) NULL,
-  `color` VARCHAR(45) NULL,
-  `is_driver` BOOLEAN NOT NULL DEFAULT FALSE,
-  PRIMARY KEY (`user_id`),
-  UNIQUE INDEX `user_id` (`user_id` ASC) VISIBLE,
-  INDEX `event_id_idx` (`event_id` ASC) VISIBLE,
-  CONSTRAINT `user_event_id`
-    FOREIGN KEY (`event_id`)
-    REFERENCES `PickADateDB`.`event` (`event_id`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION);
+CREATE TABLE IF NOT EXISTS `PickADateDB`.`account` (
+  `account_id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `email` VARCHAR(255) NOT NULL UNIQUE,
+  `password_hash` VARCHAR(255) NOT NULL,
+  `first_name` VARCHAR(100) NOT NULL,
+  `last_name` VARCHAR(100) NOT NULL,
+  `phone` VARCHAR(64),
+  `postal_code` VARCHAR(20),
+  `icon_path` VARCHAR(255),
+  `color` VARCHAR(45),
+  `is_active` BOOLEAN DEFAULT TRUE,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 
 -- -----------------------------------------------------
 -- Table `PickADateDB`.`date`
@@ -77,27 +113,27 @@ CREATE TABLE IF NOT EXISTS `PickADateDB`.`user` (
 DROP TABLE IF EXISTS `PickADateDB`.`date` ;
 
 CREATE TABLE IF NOT EXISTS `PickADateDB`.`date` (
-  `date_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `event_id` INT UNSIGNED NOT NULL,
-  `user_id` INT UNSIGNED,
+  `date_id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `event_uuid` VARCHAR(45) NOT NULL,
+  `participant_id` INT UNSIGNED NOT NULL,
   `date` DATE NOT NULL,
-  `is_blocked` BOOLEAN NOT NULL DEFAULT FALSE,
-  PRIMARY KEY (`date_id`),
-  UNIQUE INDEX `date_id` (`date_id` ASC) VISIBLE,
-  INDEX `event_id_idx` (`event_id` ASC) VISIBLE,
-  INDEX `user_id_idx` (`user_id` ASC) VISIBLE,
-  CONSTRAINT `date_event_id`
-    FOREIGN KEY (`event_id`)
-    REFERENCES `PickADateDB`.`event` (`event_id`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION,
-  CONSTRAINT `date_user_id`
-    FOREIGN KEY (`user_id`)
-    REFERENCES `PickADateDB`.`user` (`user_id`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION,
-  CONSTRAINT `one_user_id_per_date`
-    UNIQUE (`event_id`, `date`, `user_id`));
+  `availability_level` TINYINT NOT NULL DEFAULT 0, -- 0: Available, 1: Preferred, 2: Unavailable
+  INDEX `event_uuid_idx` (`event_uuid` ASC) VISIBLE,
+  INDEX `participant_id_idx` (`participant_id` ASC) VISIBLE,
+  CONSTRAINT `date_event_uuid`
+    FOREIGN KEY (`event_uuid`)
+    REFERENCES `PickADateDB`.`event` (`event_uuid`)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
+  CONSTRAINT `date_participant_id`
+    FOREIGN KEY (`participant_id`)
+    REFERENCES `PickADateDB`.`participant` (`participant_id`)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
+  CONSTRAINT `one_participant_id_per_date`
+    UNIQUE (`event_uuid`, `participant_id`, `date`),
+  CHECK (`availability_level` IN (0, 1, 2)) -- restricts availability level to 0, 1, or 2
+);
 
 
 -- ------------------------------------------------
@@ -105,11 +141,9 @@ CREATE TABLE IF NOT EXISTS `PickADateDB`.`date` (
 -- ------------------------------------------------
 
 DELIMITER $$
-CREATE TRIGGER `PickADateDB`.`event_ON_DELETE` BEFORE DELETE ON `PickADateDB`.`event`
+CREATE TRIGGER `event_ON_DELETE` BEFORE DELETE ON `PickADateDB`.`event`
 FOR EACH ROW
 BEGIN
-    DELETE FROM `PickADateDB`.`user` WHERE `event_id` = OLD.`event_id`;
-    DELETE FROM `PickADateDB`.`date` WHERE `event_id` = OLD.`event_id`;
-    DELETE FROM `PickADateDB`.`address` WHERE `event_id` = OLD.`event_id`;
+    DELETE FROM `PickADateDB`.`event_address` WHERE `event_uuid` = OLD.event_uuid;
 END$$
 DELIMITER ;
