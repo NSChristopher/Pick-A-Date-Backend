@@ -19,9 +19,9 @@ CREATE TABLE IF NOT EXISTS `PickADateDB`.`event` (
   `event_name` VARCHAR(45) NOT NULL,
   `description` VARCHAR(255) NULL,
   `date_created` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `min_date` DATE NOT NULL DEFAULT DATE_ADD(CURRENT_DATE, INTERVAL 1 DAY),
-  `max_date` DATE NOT NULL DEFAULT DATE_ADD(CURRENT_DATE, INTERVAL 30 DAY),
-  `is_active` BOOLEAN NOT NULL DEFAULT TRUE,
+  `min_date` DATE NOT NULL,
+  `max_date` DATE NOT NULL,
+  `is_active` BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 -- -----------------------------------------------------
@@ -32,7 +32,7 @@ DROP TABLE IF EXISTS `PickADateDB`.`access_token` ;
 CREATE TABLE IF NOT EXISTS `PickADateDB`.`access_token` (
   `token` VARCHAR(64) NOT NULL PRIMARY KEY,
   `event_uuid` VARCHAR(45) NOT NULL,
-  `role` ENUM('attendee', 'organizer') NOT NULL DEFAULT 'attendee',
+  `account_id` INT UNSIGNED NOT NULL,
   `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
   INDEX `event_uuid_idx` (`event_uuid`),
   CONSTRAINT `token_event_fk`
@@ -68,6 +68,27 @@ CREATE TABLE IF NOT EXISTS `PickADateDB`.`event_address` (
 );
 
 -- -----------------------------------------------------
+-- Table `PickADateDB`.`account`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `PickADateDB`.`account` ;
+
+CREATE TABLE IF NOT EXISTS `PickADateDB`.`account` (
+  `account_id` VARCHAR(45) NOT NULL PRIMARY KEY,
+  `email` VARCHAR(255) NOT NULL UNIQUE,
+  `password_hash` VARCHAR(255) NOT NULL,
+  `first_name` VARCHAR(100) NOT NULL,
+  `last_name` VARCHAR(100) NOT NULL,
+  `phone` VARCHAR(64),
+  `postal_code` VARCHAR(20),
+  `icon_path` VARCHAR(255),
+  `color` VARCHAR(45),
+  `is_active` BOOLEAN DEFAULT TRUE,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  UNIQUE (`email`)
+);
+
+-- -----------------------------------------------------
 -- Table `PickADateDB`.`participant`
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `PickADateDB`.`participant` ;
@@ -82,29 +103,10 @@ CREATE TABLE IF NOT EXISTS `PickADateDB`.`participant` (
   `icon_path` VARCHAR(255),
   `color` VARCHAR(45),
   `is_driver` BOOLEAN DEFAULT FALSE,
-  UNIQUE(event_uuid, account_id),
+  `role` ENUM('organizer', 'participant') NOT NULL DEFAULT 'participant',
+  UNIQUE(event_uuid, phone),
   FOREIGN KEY (event_uuid) REFERENCES event(event_uuid),
   FOREIGN KEY (account_id) REFERENCES account(account_id)
-);
-
--- -----------------------------------------------------
--- Table `PickADateDB`.`account`
--- -----------------------------------------------------
-DROP TABLE IF EXISTS `PickADateDB`.`account` ;
-
-CREATE TABLE IF NOT EXISTS `PickADateDB`.`account` (
-  `account_id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  `email` VARCHAR(255) NOT NULL UNIQUE,
-  `password_hash` VARCHAR(255) NOT NULL,
-  `first_name` VARCHAR(100) NOT NULL,
-  `last_name` VARCHAR(100) NOT NULL,
-  `phone` VARCHAR(64),
-  `postal_code` VARCHAR(20),
-  `icon_path` VARCHAR(255),
-  `color` VARCHAR(45),
-  `is_active` BOOLEAN DEFAULT TRUE,
-  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- -----------------------------------------------------
