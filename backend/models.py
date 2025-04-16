@@ -399,7 +399,7 @@ class AccessToken(db.Model):
 
     token = Column(String(64), primary_key=True)
     event_uuid = Column(String(45), ForeignKey('event.event_uuid'), nullable=False, index=True)
-    account_id = Column(String(45), ForeignKey('account.account_id'), nullable=False, index=True)
+    account_id = Column(String(45), nullable=False, index=True)
     created_at = Column(DateTime, default=db.func.current_timestamp())
 
     def to_dict(self):
