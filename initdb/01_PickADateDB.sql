@@ -32,7 +32,7 @@ DROP TABLE IF EXISTS `PickADateDB`.`access_token` ;
 CREATE TABLE IF NOT EXISTS `PickADateDB`.`access_token` (
   `token` VARCHAR(64) NOT NULL PRIMARY KEY,
   `event_uuid` VARCHAR(45) NOT NULL,
-  `account_id` INT UNSIGNED NOT NULL,
+  `account_id` VARCHAR(45) NOT NULL,
   `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
   INDEX `event_uuid_idx` (`event_uuid`),
   CONSTRAINT `token_event_fk`
@@ -96,7 +96,7 @@ DROP TABLE IF EXISTS `PickADateDB`.`participant` ;
 CREATE TABLE IF NOT EXISTS `PickADateDB`.`participant` (
   `participant_id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `event_uuid` VARCHAR(45) NOT NULL,
-  `account_id` INT UNSIGNED NULL,
+  `account_id` VARCHAR(45) NULL,
   `name` VARCHAR(100) NOT NULL,
   `phone` VARCHAR(64),
   `postal_code` VARCHAR(20),
