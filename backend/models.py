@@ -1,7 +1,7 @@
 from datetime import datetime, date
 import enum
 from .app import db
-from sqlalchemy import Column, Date, DateTime, String, Enum, ForeignKey, Numeric, Index, UniqueConstraint, CheckConstraint, and_, text
+from sqlalchemy import Column, Date, DateTime, String, Enum, ForeignKey, Numeric, Index, UniqueConstraint, CheckConstraint, and_, text, Integer
 from sqlalchemy.dialects.mysql import INTEGER, TINYINT, BOOLEAN
 from sqlalchemy.orm import relationship
 import uuid
@@ -307,7 +307,7 @@ class Date(db.Model):
     event_uuid = Column(String(45), ForeignKey('event.event_uuid'), nullable=False, index=True)
     participant_id = Column(INTEGER(unsigned=True), ForeignKey('participant.participant_id'), nullable=False, index=True)
     date = Column(Date, nullable=False)
-    availability_level = Column(TINYINT, nullable=False, default=0)
+    availability_level = Column(Integer, nullable=False, default=0)  # 0: Available, 1: Tentative, 2: Unavailable
 
     def to_dict(self):
         return {

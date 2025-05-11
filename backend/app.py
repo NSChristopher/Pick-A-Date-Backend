@@ -237,7 +237,7 @@ def create_app(config_name=None):
                     participants = Participant.get_participants_by_event_uuid(event_uuid) # TODO Fix this line, it should be token not event_uuid
                     return standardize_response(
                         status='success',
-                        data=[p.to_dict() for p in participants],
+                        data={'participants': [p.to_dict() for p in participants]},
                         message='Participants retrieved successfully',
                         code=200
                     )
@@ -268,10 +268,10 @@ def create_app(config_name=None):
             def get(self, phone, token):
                 try:
                     event_uuid = g.event_uuid
-                    participant = Participant.get_participant_by_phone(event_uuid, phone) # TODO Fix this line, it should be token not event_uuid
+                    participant = Participant.get_participant_by_phone_and_event_uuid(phone=phone, event_uuid=event_uuid)
                     if not participant:
                         return standardize_response(status='error', message='Participant not found', code=404)
-                    return standardize_response(status='error', message='Invalid request', code=400)
+                    return standardize_response(status='success', data=participant.to_dict(), message='Participant retrieved successfully', code=200)
 
                 except Exception as e:
                     current_app.logger.exception(e)

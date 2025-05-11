@@ -119,7 +119,7 @@ CREATE TABLE IF NOT EXISTS `PickADateDB`.`date` (
   `event_uuid` VARCHAR(45) NOT NULL,
   `participant_id` INT UNSIGNED NOT NULL,
   `date` DATE NOT NULL,
-  `availability_level` TINYINT NOT NULL DEFAULT 0, -- 0: Available, 1: Preferred, 2: Unavailable
+  `availability_level` INT NOT NULL DEFAULT 0, -- 0: Available, 1: Preferred, 2: Unavailable
   INDEX `event_uuid_idx` (`event_uuid` ASC) VISIBLE,
   INDEX `participant_id_idx` (`participant_id` ASC) VISIBLE,
   CONSTRAINT `date_event_uuid`
