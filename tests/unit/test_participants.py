@@ -42,7 +42,7 @@ def get_participant_by_phone(client, phone=None):
 
     token = create_event(client).get_json()['data']['token']
 
-    create_participant(client, token=token)
+    create_participant(client, payload=participan_payload, token=token)
 
     response = client.get(f'/events/{token}/participants/{phone}')
     return response
